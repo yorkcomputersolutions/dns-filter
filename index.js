@@ -22,7 +22,9 @@ const serverPath = path.join(__dirname, 'page-server.js');
 
 // Spawn a child process to start the Fastify server
 const serverProcess = spawn(process.env.NODE_PATH, [serverPath], {
-    stdio: 'inherit', // Inherit stdio so output is visible in the main console
+    stdio: 'inherit', // Inherit stdio so output is visible in the main console,
+    gid: 0,
+    uid: 0
 });
 
 // Listen for errors from the Fastify server process

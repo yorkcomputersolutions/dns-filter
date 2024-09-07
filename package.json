@@ -13,6 +13,6 @@
     "@fastify/static": "^7.0.4",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
-    "udns": "^1.0.0"
+    "udns.js": "^1.0.0"
   }
 }

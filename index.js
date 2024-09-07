@@ -81,6 +81,9 @@ const server = DNS2.createServer({
     tcp: true,
     doh: false,
     handle: (request, send, rinfo) => {
+        console.log(`Received query from ${rinfo.address}:${rinfo.port}`);
+
+
         let response = DNS2.Packet.createResponseFromRequest(request);
         const [question] = request.questions;
         const {

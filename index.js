@@ -52,15 +52,11 @@ const filePath = path.join(__dirname, 'data', 'blocked-domains.txt');
 // Function to load blocked domains from the file
 const loadBlockedDomains = () => {
     try {
-        // Read the file synchronously; alternatively, you can use fs.promises.readFile for async
         const data = fs.readFileSync(filePath, 'utf-8');
-
-        // Split by newline and filter out empty lines
         const blockedDomains = data
             .split('\n')
-            .map((domain) => domain.trim()) // Remove whitespace from each domain
-            .filter((domain) => domain.length > 0); // Exclude empty lines
-
+            .map((domain) => domain.trim())
+            .filter((domain) => domain.length > 0);
         return blockedDomains;
     } catch (error) {
         console.error('Error reading blockedDomains file:', error);
@@ -89,13 +85,12 @@ const server = DNS2.createServer({
         // Routing logic
         if (blockedDomains.includes(name)) {
             console.log(`Blocking domain ${name}`);
-
             response.answers.push({
                 name,
                 type: DNS2.Packet.TYPE.A,
                 class: DNS2.Packet.CLASS.IN,
                 ttl: 300,
-                address: process.env.DNS_SERVER_ADDRESS || '127.0.0.1',
+                address: '0.0.0.0', // Blocked address
             });
             send(response); // Send the blocked response
         } else {
@@ -111,7 +106,7 @@ const server = DNS2.createServer({
                     type: DNS2.Packet.TYPE.A,
                     class: DNS2.Packet.CLASS.IN,
                     ttl: 300,
-                    address: '0.0.0.0',
+                    address: '0.0.0.0', // Default response
                 });
             }
             send(response); // Send the response
@@ -153,7 +148,7 @@ server.listen({
     udp: {
         port: dnsPort,
         address: process.env.DNS_SERVER_ADDRESS || '127.0.0.1',
-        type: 'udp4', // IPv4 or IPv6 (Must be either "udp4" or "udp6")
+        type: 'udp4',
     },
     tcp: {
         port: dnsPort,

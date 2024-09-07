@@ -71,7 +71,7 @@ async function forwardQueryToUpstream(request) {
     const upstreamDns = process.env.UPSTREAM_DNS_SERVER || '1.1.1.1';
 
     return new Promise((resolve, reject) => {
-        const client = require('dgram').createSocket('udp4');
+        const client = dgram.createSocket('udp4');
         const port = 53;
 
         client.on('message', (msg) => {
@@ -84,7 +84,12 @@ async function forwardQueryToUpstream(request) {
             reject(err);
         });
 
-        client.send(packet, 0, packet.length, port, upstreamDns);
+        client.send(packet, 0, packet.length, port, upstreamDns, (err) => {
+            if (err) {
+                client.close();
+                reject(err);
+            }
+        });
     });
 }
 

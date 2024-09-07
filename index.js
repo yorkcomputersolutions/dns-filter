@@ -11,5 +11,5 @@ server.onrequest = (packet) => {
 		packet.answers.push(Record.A(name, answer))
 	}
 }
-await server.listen(53, '157.245.247.122')
+await server.listen(53, '0.0.0.0')
 console.log('DNS server listening on port 53')

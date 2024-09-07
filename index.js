@@ -49,6 +49,7 @@ const server = DNS2.createServer({
             try {
                 const upstreamResponse = await forwardQueryToUpstream(request);
                 response.answers = upstreamResponse.answers;
+                send(response);
             } catch (error) {
                 console.error(`Error forwarding query to upstream DNS: ${error.message}`);
                 response.answers.push({
@@ -58,8 +59,8 @@ const server = DNS2.createServer({
                     ttl: 300,
                     address: '0.0.0.0',
                 });
+                send(response);
             }
-            send(response);
         }
     }
 });

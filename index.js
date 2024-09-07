@@ -1,9 +1,8 @@
-// Import necessary modules
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import path, { dirname } from 'path';
 import dotenv from 'dotenv';
-import dns from 'node-dns'; // Import node-dns
+import dns from 'native-dns';
 import fs from 'fs';
 import Fastify from 'fastify';
 
@@ -72,36 +71,40 @@ const blockedDomains = loadBlockedDomains();
 /**
  * START THE DNS SERVER
  */
-const dnsServer = dns.createServer();
+const server = dns.createServer();
 
-// Function to handle DNS requests
-dnsServer.on('request', (request, response) => {
+server.on('request', (request, response) => {
     console.log(`Received query for ${request.question[0].name}`);
 
     const domain = request.question[0].name;
     
     if (blockedDomains.includes(domain)) {
         console.log(`Blocking domain ${domain}`);
-        response.answer.push({
+        response.answer.push(dns.Answer({
             name: domain,
-            type: dns.consts.NAME_TO_TYPE.A,
-            class: dns.consts.CLASS.IN,
+            type: 'A',
+            class: 'IN',
             ttl: 300,
             address: process.env.DNS_SERVER_ADDRESS || '127.0.0.1',
-        });
+        }));
         response.send();
     } else {
         // Forward the request to an upstream DNS server
-        dns.resolve(domain, (err, answer) => {
+        const upstreamDns = '1.1.1.1';
+        const requestOptions = {
+            question: request.question,
+            recursor: upstreamDns,
+        };
+        dns.resolve(requestOptions, (err, answer) => {
             if (err) {
                 console.error(`Error resolving domain ${domain}: ${err.message}`);
-                response.answer.push({
+                response.answer.push(dns.Answer({
                     name: domain,
-                    type: dns.consts.NAME_TO_TYPE.A,
-                    class: dns.consts.CLASS.IN,
+                    type: 'A',
+                    class: 'IN',
                     ttl: 300,
                     address: '1.1.1.1', // Fallback IP address
-                });
+                }));
             } else {
                 response.answer = answer;
             }
@@ -113,23 +116,13 @@ dnsServer.on('request', (request, response) => {
 // Start the DNS server on port 53 (standard DNS port)
 const dnsPort = process.env.DNS_SERVER_PORT || 53;
 
-dnsServer.on('listening', () => {
+server.on('listening', () => {
     console.log(`DNS server is running on port ${dnsPort}`);
 });
 
-dnsServer.on('close', () => {
+server.on('close', () => {
     console.log('Server closed');
 });
 
 // Bind to 0.0.0.0 for all network interfaces
-dnsServer.listen({
-    udp: {
-        port: dnsPort,
-        address: '0.0.0.0',
-        type: 'udp4', // IPv4
-    },
-    tcp: {
-        port: dnsPort,
-        address: '0.0.0.0',
-    },
-});
+server.serve(dnsPort, '0.0.0.0');

@@ -13,6 +13,6 @@
     "@fastify/static": "^7.0.4",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
-    "node-dns": "^0.1.0"
+    "native-dns": "^0.7.0"
   }
 }

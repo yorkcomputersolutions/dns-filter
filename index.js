@@ -4,8 +4,6 @@ import path, { dirname } from 'path';
 import dotenv from 'dotenv';
 import DNS2 from 'dns2'; // Import Packet from dns2
 import fs from 'fs';
-import Fastify from 'fastify';
-import { Buffer } from 'buffer';
 
 // Load the .env config
 dotenv.config();
@@ -79,23 +77,19 @@ const blockedDomains = loadBlockedDomains();
 const server = DNS2.createServer({
     udp: true,
     tcp: true,
-    doh: false,
-    handle: (request, send, rinfo) => {
+    handle: async (request, send, rinfo) => {
         console.log(`Received query from ${rinfo.address}:${rinfo.port}`);
-
 
         let response = DNS2.Packet.createResponseFromRequest(request);
         const [question] = request.questions;
-        const {
-            name
-        } = question;
-    
+        const { name } = question;
+
         console.log(`Received DNS request for ${name}`);
-    
+
         // Routing logic
         if (blockedDomains.includes(name)) {
             console.log(`Blocking domain ${name}`);
-    
+
             response.answers.push({
                 name,
                 type: DNS2.Packet.TYPE.A,
@@ -107,8 +101,9 @@ const server = DNS2.createServer({
         } else {
             // Forward unresolved queries to an upstream DNS server
             try {
+                const upstreamResponse = await forwardQueryToUpstream(request);
                 response = DNS2.Packet.createResponseFromRequest(request);
-                send(response);
+                response.answers = upstreamResponse.answers;
             } catch (error) {
                 console.error(`Error forwarding query to upstream DNS: ${error.message}`);
                 response.answers.push({
@@ -116,22 +111,27 @@ const server = DNS2.createServer({
                     type: DNS2.Packet.TYPE.A,
                     class: DNS2.Packet.CLASS.IN,
                     ttl: 300,
-                    address: '1.1.1.1',
+                    address: '0.0.0.0',
                 });
-                send(response); // Send the SERVFAIL response
             }
+            send(response); // Send the response
         }
-
     }
 });
 
-// Set the upstream DNS server to forward unresolved queries
-const upstreamDns = '1.1.1.1';
+// Function to forward DNS queries to the upstream DNS server
+async function forwardQueryToUpstream(request) {
+    const { Packet } = DNS2;
+    const packet = Packet.createRequest(request);
+    const upstreamDns = process.env.UPSTREAM_DNS_SERVER || '1.1.1.1';
+    const response = await Packet.send({
+        address: upstreamDns,
+        port: 53,
+        packet,
+    });
 
-// Handle incoming DNS requests
-server.on('request', async (request, response, rinfo) => {
-
-});
+    return Packet.parse(response);
+}
 
 // Start the DNS server on port 53 (standard DNS port)
 const dnsPort = process.env.DNS_SERVER_PORT || 53;

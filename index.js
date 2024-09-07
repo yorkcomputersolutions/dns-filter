@@ -1,4 +1,4 @@
-import { DNSServer, Record } from 'udns';
+import { DNSServer, Record } from 'udns.js';
 
 const server = new DNSServer()
 
